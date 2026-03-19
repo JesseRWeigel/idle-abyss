@@ -1,3 +1,4 @@
+import { useRef, useCallback } from 'react';
 import { GameState, GameAction } from '../engine/types';
 import { formatNumber } from '../engine/format';
 import { getFloorName, getFloorColor } from '../data/monsters';
@@ -11,22 +12,42 @@ export function DungeonView({ state, dispatch }: Props) {
   const monster = state.currentMonster;
   const floorName = getFloorName(state.currentFloor);
   const floorColor = getFloorColor(state.currentFloor);
+  const monsterRef = useRef<HTMLDivElement>(null);
 
-  const handleTap = () => {
+  const handleTap = useCallback(() => {
     dispatch({ type: 'TAP_MONSTER' });
-  };
+    // Haptic feedback on mobile
+    if (navigator.vibrate) navigator.vibrate(10);
+    // Shake animation
+    if (monsterRef.current) {
+      monsterRef.current.classList.remove('animate-shake');
+      void monsterRef.current.offsetWidth; // force reflow
+      monsterRef.current.classList.add('animate-shake');
+    }
+  }, [dispatch]);
 
   const hpPercent = monster ? Math.max(0, (monster.hp / monster.maxHp) * 100) : 0;
   const progressPercent = state.monstersOnFloor > 0
-    ? ((state.monstersOnFloor - state.monstersRemainingOnFloor) / state.monstersOnFloor) * 100
-    : 0;
+    ? ((state.monstersOnFloor - Math.max(0, state.monstersRemainingOnFloor)) / state.monstersOnFloor) * 100
+    : 100;
+
+  // Active hero portraits
+  const activeHeroes = state.heroes.filter(h => h.unlocked && state.activeHeroIds.includes(h.id));
 
   return (
     <div className="flex flex-col items-center h-full relative overflow-hidden select-none">
+      {/* Ambient background glow */}
+      <div
+        className="absolute inset-0 opacity-10 pointer-events-none"
+        style={{
+          background: `radial-gradient(ellipse at 50% 40%, ${floorColor}40 0%, transparent 70%)`,
+        }}
+      />
+
       {/* Floor info */}
-      <div className="w-full px-4 pt-3 pb-2">
+      <div className="w-full px-4 pt-3 pb-1 relative z-10">
         <div className="flex justify-between items-center mb-1">
-          <span className="text-xs font-medium opacity-60" style={{ color: floorColor }}>
+          <span className="text-xs font-medium" style={{ color: floorColor }}>
             {floorName}
           </span>
           <span className="text-xs opacity-40">
@@ -35,8 +56,6 @@ export function DungeonView({ state, dispatch }: Props) {
               : '⚠️ BOSS'}
           </span>
         </div>
-
-        {/* Floor progress bar */}
         <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-300"
@@ -48,9 +67,38 @@ export function DungeonView({ state, dispatch }: Props) {
         </div>
       </div>
 
+      {/* Hero party display */}
+      <div className="flex gap-1.5 px-4 py-1.5 relative z-10">
+        {activeHeroes.map(hero => {
+          const hpPct = hero.baseStats.hp / hero.baseStats.maxHp;
+          return (
+            <div key={hero.id} className="flex flex-col items-center">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-base border"
+                style={{
+                  borderColor: hpPct > 0.5 ? '#22c55e40' : hpPct > 0.25 ? '#f59e0b40' : '#ef444440',
+                  background: `rgba(255,255,255,0.05)`,
+                }}
+              >
+                {hero.emoji}
+              </div>
+              <div className="w-8 h-0.5 rounded-full mt-0.5 overflow-hidden bg-white/10">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${hpPct * 100}%`,
+                    background: hpPct > 0.5 ? '#22c55e' : hpPct > 0.25 ? '#f59e0b' : '#ef4444',
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* Monster area — tappable */}
       <div
-        className="flex-1 flex flex-col items-center justify-center w-full cursor-pointer active:scale-95 transition-transform"
+        className="flex-1 flex flex-col items-center justify-center w-full cursor-pointer active:scale-[0.97] transition-transform relative z-10"
         onClick={handleTap}
         role="button"
         tabIndex={0}
@@ -58,50 +106,75 @@ export function DungeonView({ state, dispatch }: Props) {
       >
         {monster && (
           <>
-            {/* Monster name */}
-            <div className="text-center mb-2">
+            {/* Monster name & level */}
+            <div className="text-center mb-3">
               {monster.isBoss && (
-                <span className="text-[10px] font-bold text-ruby-400 uppercase tracking-widest">
+                <div className="text-[10px] font-bold text-ruby-400 uppercase tracking-widest mb-1 animate-pulse-glow" style={{ color: '#f87171' }}>
                   ⚠️ BOSS ⚠️
-                </span>
+                </div>
               )}
-              <div className="text-sm font-medium text-white/80">
+              <div className="text-base font-semibold text-white/90">
                 {monster.name}
               </div>
-            </div>
-
-            {/* Monster emoji — big and tappable */}
-            <div
-              className={`text-7xl mb-3 ${monster.hp < monster.maxHp * 0.3 ? 'animate-shake' : ''}`}
-              style={{ filter: monster.isBoss ? 'drop-shadow(0 0 12px rgba(239, 68, 68, 0.6))' : undefined }}
-            >
-              {monster.emoji}
-            </div>
-
-            {/* HP bar */}
-            <div className="w-3/4 max-w-xs">
-              <div className="flex justify-between text-[10px] mb-0.5 opacity-60">
-                <span>HP</span>
-                <span>{formatNumber(Math.max(0, monster.hp))} / {formatNumber(monster.maxHp)}</span>
+              <div className="text-[10px] opacity-30 mt-0.5">
+                Floor {state.currentFloor} · {monster.isBoss ? 'Boss' : 'Monster'}
               </div>
-              <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden">
+            </div>
+
+            {/* Monster emoji — large, with glow effect */}
+            <div className="relative mb-4">
+              {/* Glow behind monster */}
+              <div
+                className="absolute inset-0 blur-2xl opacity-30 rounded-full"
+                style={{
+                  background: monster.isBoss
+                    ? 'radial-gradient(circle, #ef4444 0%, transparent 70%)'
+                    : 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)',
+                  transform: 'scale(2)',
+                }}
+              />
+              <div
+                ref={monsterRef}
+                className="relative text-8xl"
+                style={{
+                  filter: monster.isBoss
+                    ? 'drop-shadow(0 0 20px rgba(239, 68, 68, 0.5))'
+                    : 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
+                }}
+              >
+                {monster.emoji}
+              </div>
+            </div>
+
+            {/* HP bar — wider and more prominent */}
+            <div className="w-[85%] max-w-sm">
+              <div className="flex justify-between text-[10px] mb-0.5">
+                <span className="opacity-50">HP</span>
+                <span className="font-mono opacity-60">{formatNumber(Math.max(0, monster.hp))} / {formatNumber(monster.maxHp)}</span>
+              </div>
+              <div className="w-full h-4 bg-white/10 rounded-full overflow-hidden border border-white/5">
                 <div
-                  className="health-bar-fill h-full rounded-full"
+                  className="health-bar-fill h-full rounded-full relative"
                   style={{
                     width: `${hpPercent}%`,
                     background: hpPercent > 50
-                      ? 'linear-gradient(90deg, #22c55e, #4ade80)'
+                      ? 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)'
                       : hpPercent > 25
-                        ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
-                        : 'linear-gradient(90deg, #ef4444, #f87171)',
+                        ? 'linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%)'
+                        : 'linear-gradient(180deg, #f87171 0%, #ef4444 100%)',
+                    boxShadow: `0 0 8px ${hpPercent > 50 ? '#22c55e40' : hpPercent > 25 ? '#f59e0b40' : '#ef444440'}`,
                   }}
-                />
+                >
+                  {/* HP bar shine */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent rounded-full" />
+                </div>
               </div>
             </div>
 
-            {/* Tap hint */}
-            <div className="mt-3 text-[10px] opacity-30">
-              TAP TO DEAL {formatNumber(state.tapDamage)} DAMAGE
+            {/* DPS indicator */}
+            <div className="mt-4 flex items-center gap-4 text-[10px]">
+              <span className="opacity-30">⚔️ DPS: <span className="text-white/50 font-mono">{formatNumber(state.dps)}</span></span>
+              <span className="opacity-30">👆 Tap: <span className="text-gold-400/50 font-mono">{formatNumber(state.tapDamage)}</span></span>
             </div>
           </>
         )}
@@ -110,12 +183,13 @@ export function DungeonView({ state, dispatch }: Props) {
         {state.floatingNumbers.map(f => (
           <div
             key={f.id}
-            className="absolute animate-float-up font-bold text-lg pointer-events-none"
+            className="absolute animate-float-up font-bold pointer-events-none"
             style={{
               left: `${f.x}%`,
               top: `${f.y}%`,
               color: f.color,
-              textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+              fontSize: f.color === '#fbbf24' ? '14px' : f.value.includes('!') ? '22px' : '16px',
+              textShadow: `0 2px 4px rgba(0,0,0,0.6), 0 0 8px ${f.color}40`,
             }}
           >
             {f.value}
@@ -124,10 +198,10 @@ export function DungeonView({ state, dispatch }: Props) {
       </div>
 
       {/* Combat stats bar */}
-      <div className="w-full px-4 pb-2">
-        <div className="flex justify-between text-[10px] opacity-50">
-          <span>DPS: {formatNumber(state.dps)}</span>
+      <div className="w-full px-4 pb-2 relative z-10">
+        <div className="flex justify-between text-[10px] opacity-40">
           <span>Floor {state.currentFloor}</span>
+          <span>Best: F{state.highestFloor}</span>
           <span>Kills: {formatNumber(state.monstersKilled)}</span>
         </div>
       </div>
