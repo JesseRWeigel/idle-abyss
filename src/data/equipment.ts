@@ -62,7 +62,15 @@ export function generateEquipment(floor: number): Equipment | null {
 
   const stats: Partial<Record<string, number>> = {};
   for (const [stat, weight] of Object.entries(template.statWeights)) {
-    const value = Math.floor(basePower * weight * mult * (0.8 + Math.random() * 0.4));
+    let value = basePower * weight * mult * (0.8 + Math.random() * 0.4);
+    // Crit stats are percentages stored as decimals (0.05 = 5%)
+    if (stat === 'critChance') {
+      value = parseFloat((value * 0.01).toFixed(3)); // e.g. 5 -> 0.05
+    } else if (stat === 'critDamage') {
+      value = parseFloat((value * 0.05).toFixed(2)); // e.g. 5 -> 0.25
+    } else {
+      value = Math.floor(value);
+    }
     if (value > 0) stats[stat] = value;
   }
 
