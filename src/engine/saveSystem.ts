@@ -45,6 +45,8 @@ export function loadGame(): GameState | null {
       combatLog: [],
       floatingNumbers: [],
       notifications: [],
+      monsterDying: false,
+      events: [],
     };
   } catch (e) {
     console.warn('Failed to load save:', e);

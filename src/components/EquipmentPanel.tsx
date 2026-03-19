@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GameState, GameAction, Equipment, Hero } from '../engine/types';
+import { GameState, GameAction, Equipment, Rarity } from '../engine/types';
 import { formatNumber, getRarityColor } from '../engine/format';
 import { getEquipmentSellValue } from '../data/equipment';
 
@@ -93,10 +93,45 @@ export function EquipmentPanel({ state, dispatch }: Props) {
         </div>
       )}
 
-      {/* Inventory */}
-      <div className="text-[10px] opacity-40 mb-1 uppercase tracking-wider">
-        Inventory ({state.inventory.length}/30)
+      {/* Inventory header + Sell buttons */}
+      <div className="flex items-center justify-between mb-1">
+        <div className="text-[10px] opacity-40 uppercase tracking-wider">
+          Inventory ({state.inventory.length}/30)
+        </div>
       </div>
+      {state.inventory.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          <button
+            className="px-2 py-1 rounded text-[9px] font-medium bg-ruby-500/20 text-ruby-400 border border-ruby-500/30 active:scale-95 transition-all"
+            onClick={() => {
+              if (confirm(`Sell ALL ${state.inventory.length} items?`)) {
+                dispatch({ type: 'SELL_ALL_ITEMS' });
+              }
+            }}
+          >
+            Sell All ({state.inventory.length})
+          </button>
+          {(['common', 'uncommon'] as Rarity[]).map(rarity => {
+            const count = state.inventory.filter(i => i.rarity === rarity).length;
+            if (count === 0) return null;
+            return (
+              <button
+                key={rarity}
+                className="px-2 py-1 rounded text-[9px] font-medium active:scale-95 transition-all"
+                style={{
+                  background: `${getRarityColor(rarity)}20`,
+                  color: getRarityColor(rarity),
+                  borderWidth: 1,
+                  borderColor: `${getRarityColor(rarity)}40`,
+                }}
+                onClick={() => dispatch({ type: 'SELL_ITEMS_BY_RARITY', rarity })}
+              >
+                Sell {rarity.charAt(0).toUpperCase() + rarity.slice(1)} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
       {state.inventory.length === 0 ? (
         <div className="text-center py-6 opacity-20 text-xs">
           Kill monsters to find loot!

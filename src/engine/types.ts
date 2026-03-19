@@ -126,7 +126,18 @@ export interface FloatingNumber {
   y: number;
   color: string;
   timestamp: number;
+  type?: 'normal' | 'crit' | 'gold';
 }
+
+/** Events emitted by the engine for UI effects (sounds, particles, flashes) */
+export type GameEvent =
+  | 'monsterDeath'
+  | 'criticalHit'
+  | 'goldPickup'
+  | 'levelUp'
+  | 'achievement'
+  | 'bossAppear'
+  | 'prestige';
 
 export interface GameState {
   // Resources
@@ -178,6 +189,10 @@ export interface GameState {
   offlineEarnings: { gold: number; time: number } | null;
   showPrestigeConfirm: boolean;
   notifications: string[];
+
+  // Effects
+  monsterDying: boolean;
+  events: GameEvent[];
 }
 
 export type GameAction =
@@ -187,6 +202,10 @@ export type GameAction =
   | { type: 'EQUIP_ITEM'; heroId: string; itemId: string }
   | { type: 'UNEQUIP_ITEM'; heroId: string; slot: EquipSlot }
   | { type: 'SELL_ITEM'; itemId: string }
+  | { type: 'SELL_ALL_ITEMS' }
+  | { type: 'SELL_ITEMS_BY_RARITY'; rarity: Rarity }
+  | { type: 'BUY_MAX_HERO_LEVELS'; heroId: string }
+  | { type: 'BUY_MAX_PRESTIGE_UPGRADE'; upgradeId: string }
   | { type: 'UNLOCK_HERO'; heroId: string }
   | { type: 'SET_ACTIVE_HERO'; heroId: string; active: boolean }
   | { type: 'PRESTIGE' }
@@ -198,4 +217,5 @@ export type GameAction =
   | { type: 'SHOW_PRESTIGE_CONFIRM' }
   | { type: 'LOAD_SAVE'; state: Partial<GameState> }
   | { type: 'USE_SKILL'; heroId: string; skillId: string }
+  | { type: 'MONSTER_DEATH_DONE' }
   | { type: 'CLEAR_NOTIFICATIONS' };

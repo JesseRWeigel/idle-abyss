@@ -102,6 +102,63 @@ body {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
+/* Critical hit floating number — scale up then float */
+@keyframes float-crit {
+  0% { opacity: 1; transform: translateY(0) scale(0.5); }
+  20% { opacity: 1; transform: translateY(-5px) scale(1.4); }
+  100% { opacity: 0; transform: translateY(-80px) scale(0.9); }
+}
+
+.animate-float-crit {
+  animation: float-crit 1.2s ease-out forwards;
+}
+
+/* Gold floating number — smaller, float to the side */
+@keyframes float-gold {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(15px, -40px) scale(0.7); }
+}
+
+.animate-float-gold {
+  animation: float-gold 1s ease-out forwards;
+}
+
+/* Monster death — shake then fade out */
+@keyframes monster-death {
+  0% { opacity: 1; transform: scale(1) translateX(0); }
+  10% { transform: scale(1.05) translateX(-4px); }
+  20% { transform: scale(1.05) translateX(4px); }
+  30% { transform: scale(1.02) translateX(-3px); }
+  40% { transform: scale(1.02) translateX(3px); }
+  50% { opacity: 0.7; transform: scale(1) translateX(0); }
+  100% { opacity: 0; transform: scale(0.5) translateY(10px); }
+}
+
+.animate-monster-death {
+  animation: monster-death 0.4s ease-out forwards;
+}
+
+/* Critical hit screen flash */
+@keyframes crit-flash {
+  0% { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+
+.animate-crit-flash {
+  animation: crit-flash 0.2s ease-out forwards;
+}
+
+/* Particle burst — scatter outward then fade */
+@keyframes particle-burst {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  70% { opacity: 0.8; transform: translate(var(--tx), var(--ty)) scale(1); }
+  100% { opacity: 0; transform: translate(var(--tx), calc(var(--ty) + 20px)) scale(0.3); }
+}
+
+.animate-particle-burst {
+  animation: particle-burst 0.7s ease-out forwards;
+}
+
 /* Health bar animation */
 .health-bar-fill {
   transition: width 0.3s ease-out;

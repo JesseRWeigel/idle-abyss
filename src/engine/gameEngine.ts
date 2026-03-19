@@ -99,6 +99,8 @@ export function createInitialState(): GameState {
     offlineEarnings: null,
     showPrestigeConfirm: false,
     notifications: [],
+    monsterDying: false,
+    events: [],
   };
   state.currentMonster = spawnMonster(1, false);
   return state;
@@ -115,6 +117,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
   s.achievements = state.achievements.map(a => ({ ...a }));
   s.activeHeroIds = [...state.activeHeroIds];
   s.notifications = [...state.notifications];
+  s.events = []; // Clear events each tick — they're consumed by the UI
 
   switch (action.type) {
     case 'TICK': {
@@ -125,6 +128,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const now = Date.now();
       s.floatingNumbers = s.floatingNumbers.filter(f => now - f.timestamp < 1000);
 
+      // If monster is in death animation, skip combat and wait
+      if (s.monsterDying) {
+        return s;
+      }
+
       // Spawn monster if needed
       if (!s.currentMonster) {
         if (s.monstersRemainingOnFloor <= 0) {
@@ -133,6 +141,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             s.currentMonster = spawnMonster(s.currentFloor, true);
             s.monstersRemainingOnFloor = -1; // Flag: boss active
             addLog(s, `⚠️ BOSS: ${s.currentMonster.name} appears!`, 'boss');
+            s.events.push('bossAppear');
           }
         } else {
           s.currentMonster = spawnMonster(s.currentFloor, false);
@@ -170,7 +179,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             y: 30 + Math.random() * 20,
             color: isCrit ? '#fbbf24' : '#e2e8f0',
             timestamp: now,
+            type: isCrit ? 'crit' : 'normal',
           });
+
+          if (isCrit) {
+            s.events.push('criticalHit');
+          }
         }
 
         // Skill cooldown
@@ -216,6 +230,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             hero.baseStats.maxHp = Math.floor(hero.baseStats.maxHp * 1.12);
             hero.baseStats.hp = hero.baseStats.maxHp;
             addLog(s, `⬆️ ${hero.name} reached level ${hero.level}!`, 'level');
+            s.events.push('levelUp');
           }
         }
 
@@ -247,16 +262,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           s.monstersRemainingOnFloor--;
         }
 
-        s.currentMonster = null;
+        // Enter death animation state — monster stays visible but dying
+        s.monsterDying = true;
+        s.events.push('monsterDeath');
+        s.events.push('goldPickup');
 
         // Floating gold number
         s.floatingNumbers.push({
           id: now + Math.random() + 0.5,
           value: `+${goldEarned}g`,
-          x: 50,
-          y: 60,
+          x: 65 + Math.random() * 15,
+          y: 55 + Math.random() * 10,
           color: '#fbbf24',
           timestamp: now,
+          type: 'gold',
         });
       }
 
@@ -280,6 +299,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           }
           s.notifications.push(`🏆 Achievement: ${achievement.name}!`);
           addLog(s, `🏆 Achievement unlocked: ${achievement.name}!`, 'loot');
+          s.events.push('achievement');
         }
       }
 
@@ -391,6 +411,69 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return s;
     }
 
+    case 'SELL_ALL_ITEMS': {
+      if (s.inventory.length === 0) return s;
+      let totalValue = 0;
+      for (const item of s.inventory) {
+        totalValue += getEquipmentSellValue(item);
+      }
+      s.gold += totalValue;
+      s.totalGold += totalValue;
+      addLog(s, `💰 Sold ${s.inventory.length} items for ${totalValue}g`, 'loot');
+      s.inventory = [];
+      return s;
+    }
+
+    case 'SELL_ITEMS_BY_RARITY': {
+      const toSell = s.inventory.filter(i => i.rarity === action.rarity);
+      if (toSell.length === 0) return s;
+      let totalValue = 0;
+      for (const item of toSell) {
+        totalValue += getEquipmentSellValue(item);
+      }
+      s.gold += totalValue;
+      s.totalGold += totalValue;
+      addLog(s, `💰 Sold ${toSell.length} ${action.rarity} items for ${totalValue}g`, 'loot');
+      s.inventory = s.inventory.filter(i => i.rarity !== action.rarity);
+      return s;
+    }
+
+    case 'BUY_MAX_HERO_LEVELS': {
+      const hero = s.heroes.find(h => h.id === action.heroId);
+      if (!hero || !hero.unlocked) return s;
+
+      let bought = 0;
+      while (true) {
+        const cost = heroUpgradeCost(hero);
+        if (s.gold < cost) break;
+        s.gold -= cost;
+        hero.level++;
+        hero.xpToNext = xpForLevel(hero.level);
+        hero.baseStats.maxHp = Math.floor(hero.baseStats.maxHp * 1.12);
+        hero.baseStats.hp = hero.baseStats.maxHp;
+        hero.baseStats.attack = Math.floor(hero.baseStats.attack * 1.08);
+        hero.baseStats.defense = Math.floor(hero.baseStats.defense * 1.06);
+        bought++;
+        if (bought >= 1000) break; // Safety cap
+      }
+      return s;
+    }
+
+    case 'BUY_MAX_PRESTIGE_UPGRADE': {
+      const upgrade = s.prestigeUpgrades.find(u => u.id === action.upgradeId);
+      if (!upgrade || upgrade.currentLevel >= upgrade.maxLevel) return s;
+
+      let bought = 0;
+      while (upgrade.currentLevel < upgrade.maxLevel) {
+        const cost = getPrestigeUpgradeCost(upgrade);
+        if (s.abyssShards < cost) break;
+        s.abyssShards -= cost;
+        upgrade.currentLevel++;
+        bought++;
+      }
+      return s;
+    }
+
     case 'USE_SKILL': {
       const hero = s.heroes.find(h => h.id === action.heroId);
       if (!hero || !s.currentMonster) return s;
@@ -488,7 +571,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       addLog(s, `🔄 PRESTIGE #${s.prestigeCount}! Earned ${shards} Abyss Shards!`, 'prestige');
       s.notifications.push(`🔄 Prestige complete! +${shards} Abyss Shards`);
+      s.events.push('prestige');
 
+      return s;
+    }
+
+    case 'MONSTER_DEATH_DONE': {
+      s.monsterDying = false;
+      s.currentMonster = null;
       return s;
     }
 

@@ -78,19 +78,29 @@ export function PrestigePanel({ state, dispatch }: Props) {
                   Level {upgrade.currentLevel}/{upgrade.maxLevel}
                 </div>
               </div>
-              <button
-                className={`px-2.5 py-1.5 rounded text-[10px] font-medium transition-all flex-shrink-0 ${
-                  isMaxed
-                    ? 'bg-gold-500/20 text-gold-400 cursor-default'
-                    : canBuy
-                      ? 'bg-crystal-500/20 text-crystal-400 border border-crystal-500/30 active:scale-95'
-                      : 'bg-white/5 text-white/20 cursor-not-allowed'
-                }`}
-                onClick={() => canBuy && dispatch({ type: 'BUY_PRESTIGE_UPGRADE', upgradeId: upgrade.id })}
-                disabled={!canBuy}
-              >
-                {isMaxed ? 'MAX' : `${cost} 💎`}
-              </button>
+              <div className="flex flex-col gap-1 flex-shrink-0">
+                <button
+                  className={`px-2.5 py-1.5 rounded text-[10px] font-medium transition-all ${
+                    isMaxed
+                      ? 'bg-gold-500/20 text-gold-400 cursor-default'
+                      : canBuy
+                        ? 'bg-crystal-500/20 text-crystal-400 border border-crystal-500/30 active:scale-95'
+                        : 'bg-white/5 text-white/20 cursor-not-allowed'
+                  }`}
+                  onClick={() => canBuy && dispatch({ type: 'BUY_PRESTIGE_UPGRADE', upgradeId: upgrade.id })}
+                  disabled={!canBuy}
+                >
+                  {isMaxed ? 'MAX' : `${cost} 💎`}
+                </button>
+                {!isMaxed && canBuy && (
+                  <button
+                    className="px-2.5 py-1 rounded text-[9px] font-medium transition-all bg-gold-500/20 text-gold-400 border border-gold-500/30 active:scale-95"
+                    onClick={() => dispatch({ type: 'BUY_MAX_PRESTIGE_UPGRADE', upgradeId: upgrade.id })}
+                  >
+                    Buy Max
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}

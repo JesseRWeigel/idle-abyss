@@ -1,7 +1,9 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import { GameState, GameAction } from '../engine/types';
 import { formatNumber } from '../engine/format';
 import { getFloorName, getFloorColor } from '../data/monsters';
+import { playSound } from '../engine/sounds';
+import { Particles } from './Particles';
 
 interface Props {
   state: GameState;
@@ -14,8 +16,63 @@ export function DungeonView({ state, dispatch }: Props) {
   const floorColor = getFloorColor(state.currentFloor);
   const monsterRef = useRef<HTMLDivElement>(null);
 
+  // Track particle burst triggers
+  const [deathParticleTrigger, setDeathParticleTrigger] = useState(0);
+
+  // Track critical hit flash
+  const [showCritFlash, setShowCritFlash] = useState(false);
+
+  // Process game events for sounds and effects
+  useEffect(() => {
+    for (const event of state.events) {
+      switch (event) {
+        case 'monsterDeath':
+          playSound('monsterDeath');
+          setDeathParticleTrigger(t => t + 1);
+          break;
+        case 'criticalHit':
+          playSound('hit');
+          setShowCritFlash(true);
+          break;
+        case 'goldPickup':
+          playSound('goldPickup');
+          break;
+        case 'levelUp':
+          playSound('levelUp');
+          break;
+        case 'achievement':
+          playSound('achievement');
+          break;
+        case 'bossAppear':
+          playSound('bossAppear');
+          break;
+        case 'prestige':
+          playSound('prestige');
+          break;
+      }
+    }
+  }, [state.events]);
+
+  // Clear crit flash after animation
+  useEffect(() => {
+    if (!showCritFlash) return;
+    const timer = setTimeout(() => setShowCritFlash(false), 200);
+    return () => clearTimeout(timer);
+  }, [showCritFlash]);
+
+  // Handle monster death animation cleanup
+  useEffect(() => {
+    if (!state.monsterDying) return;
+    const timer = setTimeout(() => {
+      dispatch({ type: 'MONSTER_DEATH_DONE' });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [state.monsterDying, dispatch]);
+
   const handleTap = useCallback(() => {
+    if (state.monsterDying) return;
     dispatch({ type: 'TAP_MONSTER' });
+    playSound('tap');
     // Haptic feedback on mobile
     if (navigator.vibrate) navigator.vibrate(10);
     // Shake animation
@@ -24,7 +81,7 @@ export function DungeonView({ state, dispatch }: Props) {
       void monsterRef.current.offsetWidth; // force reflow
       monsterRef.current.classList.add('animate-shake');
     }
-  }, [dispatch]);
+  }, [dispatch, state.monsterDying]);
 
   const hpPercent = monster ? Math.max(0, (monster.hp / monster.maxHp) * 100) : 0;
   const progressPercent = state.monstersOnFloor > 0
@@ -36,6 +93,14 @@ export function DungeonView({ state, dispatch }: Props) {
 
   return (
     <div className="flex flex-col items-center h-full relative overflow-hidden select-none">
+      {/* Critical hit screen flash */}
+      {showCritFlash && (
+        <div className="absolute inset-0 z-30 pointer-events-none animate-crit-flash bg-gold-400/20" />
+      )}
+
+      {/* Particle effects */}
+      <Particles trigger={deathParticleTrigger} x={50} y={40} type="gold" />
+
       {/* Ambient background glow */}
       <div
         className="absolute inset-0 opacity-10 pointer-events-none"
@@ -135,7 +200,7 @@ export function DungeonView({ state, dispatch }: Props) {
               />
               <div
                 ref={monsterRef}
-                className="relative text-8xl"
+                className={`relative text-8xl ${state.monsterDying ? 'animate-monster-death' : ''}`}
                 style={{
                   filter: monster.isBoss
                     ? 'drop-shadow(0 0 20px rgba(239, 68, 68, 0.5))'
@@ -180,21 +245,36 @@ export function DungeonView({ state, dispatch }: Props) {
         )}
 
         {/* Floating damage numbers */}
-        {state.floatingNumbers.map(f => (
-          <div
-            key={f.id}
-            className="absolute animate-float-up font-bold pointer-events-none"
-            style={{
-              left: `${f.x}%`,
-              top: `${f.y}%`,
-              color: f.color,
-              fontSize: f.color === '#fbbf24' ? '14px' : f.value.includes('!') ? '22px' : '16px',
-              textShadow: `0 2px 4px rgba(0,0,0,0.6), 0 0 8px ${f.color}40`,
-            }}
-          >
-            {f.value}
-          </div>
-        ))}
+        {state.floatingNumbers.map(f => {
+          const isCrit = f.type === 'crit';
+          const isGold = f.type === 'gold';
+          let cn = 'absolute font-bold pointer-events-none ';
+          if (isCrit) {
+            cn += 'animate-float-crit';
+          } else if (isGold) {
+            cn += 'animate-float-gold';
+          } else {
+            cn += 'animate-float-up';
+          }
+          return (
+            <div
+              key={f.id}
+              className={cn}
+              style={{
+                left: `${f.x}%`,
+                top: `${f.y}%`,
+                color: f.color,
+                fontSize: isCrit ? '24px' : isGold ? '13px' : '16px',
+                fontWeight: isCrit ? 900 : isGold ? 600 : 700,
+                textShadow: isCrit
+                  ? '0 2px 8px rgba(251, 191, 36, 0.8), 0 0 16px rgba(251, 191, 36, 0.4)'
+                  : `0 2px 4px rgba(0,0,0,0.6), 0 0 8px ${f.color}40`,
+              }}
+            >
+              {f.value}
+            </div>
+          );
+        })}
       </div>
 
       {/* Combat stats bar */}

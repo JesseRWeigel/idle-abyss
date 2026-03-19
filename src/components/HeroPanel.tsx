@@ -126,18 +126,31 @@ function HeroCard({ hero, state, dispatch }: { hero: Hero; state: GameState; dis
         })}
       </div>
 
-      {/* Upgrade button */}
-      <button
-        className={`w-full py-1.5 rounded text-xs font-medium transition-all ${
-          canUpgrade
-            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 active:scale-95'
-            : 'bg-white/5 text-white/20 border border-white/5 cursor-not-allowed'
-        }`}
-        onClick={() => canUpgrade && dispatch({ type: 'UPGRADE_HERO', heroId: hero.id })}
-        disabled={!canUpgrade}
-      >
-        Level Up — {formatNumber(upgradeCost)}g
-      </button>
+      {/* Upgrade buttons */}
+      <div className="flex gap-1">
+        <button
+          className={`flex-1 py-1.5 rounded text-xs font-medium transition-all ${
+            canUpgrade
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 active:scale-95'
+              : 'bg-white/5 text-white/20 border border-white/5 cursor-not-allowed'
+          }`}
+          onClick={() => canUpgrade && dispatch({ type: 'UPGRADE_HERO', heroId: hero.id })}
+          disabled={!canUpgrade}
+        >
+          +1 — {formatNumber(upgradeCost)}g
+        </button>
+        <button
+          className={`px-2.5 py-1.5 rounded text-xs font-medium transition-all flex-shrink-0 ${
+            canUpgrade
+              ? 'bg-gold-500/20 text-gold-400 border border-gold-500/30 active:scale-95'
+              : 'bg-white/5 text-white/20 border border-white/5 cursor-not-allowed'
+          }`}
+          onClick={() => canUpgrade && dispatch({ type: 'BUY_MAX_HERO_LEVELS', heroId: hero.id })}
+          disabled={!canUpgrade}
+        >
+          Buy Max
+        </button>
+      </div>
     </div>
   );
 }
