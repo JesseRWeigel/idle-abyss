@@ -1,73 +1,42 @@
-# React + TypeScript + Vite
+# Idle Abyss — The Endless Dungeon
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A free idle RPG dungeon crawler with zero microtransactions. All progression is earned through gameplay.
 
-Currently, two official plugins are available:
+**[Play Now](https://jesserweigel.github.io/idle-abyss/)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+**Heroes** — 6 classes (Warrior, Mage, Rogue, Cleric, Ranger, Berserker), each with 3 unique skills. Auto-combat with tap-to-damage bonus.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**Dungeon** — 100+ floors across 5 biomes: Dungeon Entrance, Dark Caverns, Infernal Depths, Frozen Abyss, and The Void. Boss fights every floor clear.
 
-## Expanding the ESLint configuration
+**Equipment** — Weapons, armor, and accessories drop from monsters in 5 rarity tiers (Common → Legendary). Equip heroes to boost stats.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+**Prestige** — Reset progress for Abyss Shards. Spend them on 8 permanent upgrade paths: damage, gold, XP, HP, crit, tap power, starting gold, and floor skip.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+**Achievements** — 26 milestones tracking kills, floors, gold, bosses, heroes, taps, and prestiges.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+**Offline Earnings** — Accumulate gold while you're away (up to 8 hours).
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+**Quality of Life** — Buy Max levels, Sell All equipment, Auto-Advance toggle for floor farming.
+
+**Sound & Effects** — Procedural Web Audio sounds, monster death animations, critical hit flashes, particle bursts, haptic feedback on mobile.
+
+## Tech Stack
+
+- React + TypeScript + Vite
+- Tailwind CSS v4
+- Web Audio API (procedural sounds)
+- localStorage (save system)
+- GitHub Pages (auto-deploy)
+
+## Development
+
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## License
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+MIT
